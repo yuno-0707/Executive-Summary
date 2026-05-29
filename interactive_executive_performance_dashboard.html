@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Executive Financial Performance Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Executive Sand & Navy -->
+    <!-- Application Structure Plan: The SPA uses a top-down executive dashboard structure. It begins with a unified executive summary and dynamic KPI cards for immediate high-level comprehension. The middle section utilizes a dual-chart layout comparing macro growth against micro (Type-level) margin vulnerabilities, specifically highlighting the 'Winners' vs 'Bleeders' via a scatter plot. The bottom section structuralizes risks and strategic recommendations into clear, actionable cards. This non-linear design allows executives to grasp the bottom line instantly while exploring the operational 'why' at their own pace. -->
+    <!-- Visualization & Content Choices: 1. Dynamic KPI Cards (HTML/JS) -> Goal: Inform -> Instantly show Gross Sales, Cost, GP, and Margin based on year toggle. 2. Grouped Bar Chart (Chart.js) -> Goal: Compare -> Displays YoY Overall Financials (Sales vs Cost vs GP) to visualize the 100% growth scale. 3. Scatter Plot (Chart.js) -> Goal: Relationships -> Plots 'Type' performance (Sales Volume on X, GP Margin % on Y) to visually isolate high-revenue/low-margin risks (Fabrication) from core drivers (Terminals). 4. Risk/Action Grid (Tailwind) -> Goal: Organize -> Translates the text report's warnings into actionable UI elements. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f5f5f4;
+            color: #1c1917;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 40vh;
+            max-height: 400px;
+            min-height: 300px;
+        }
+        .kpi-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .nav-btn.active {
+            background-color: #1e3a8a;
+            color: white;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <header class="mb-10">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Executive Performance Analysis</h1>
+            <h2 class="text-xl text-gray-600 mb-6">Fiscal Years 2024 vs. 2025</h2>
+            
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <p class="text-gray-700 leading-relaxed">
+                    This interactive dashboard provides a management-level evaluation of business performance based on the provided dataset. The business experienced exceptional <strong>+100.43% YoY growth</strong>, doubling Gross Sales while maintaining a strong <strong>~61% Gross Profit Margin</strong>. Explore the data below to understand the strategic pivot toward "Terminals," analyze margin dilution from new ventures, and review critical data integrity risks.
+                </p>
+            </div>
+        </header>
+
+        <section class="mb-12">
+            <div class="mb-4">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-2">1. Overall Financial Performance</h3>
+                <p class="text-gray-600">Select a fiscal year to instantly update the top-line performance metrics. This section provides an immediate snapshot of total volume and profitability, demonstrating aggressive scaling with proportionate cost management.</p>
+            </div>
+
+            <div class="flex space-x-2 mb-6">
+                <button onclick="updateKPIs('2024')" id="btn-2024" class="nav-btn px-6 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">FY 2024</button>
+                <button onclick="updateKPIs('2025')" id="btn-2025" class="nav-btn px-6 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors active">FY 2025</button>
+                <button onclick="updateKPIs('variance')" id="btn-variance" class="nav-btn px-6 py-2 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">YoY Variance</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="kpi-card bg-white p-6 rounded-xl border-l-4 border-blue-600 shadow-sm">
+                    <p class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">Gross Sales</p>
+                    <h4 class="text-2xl font-bold text-gray-900" id="kpi-sales">PHP 12,546,195</h4>
+                    <p class="text-xs text-green-600 mt-2 font-medium" id="kpi-sales-sub">&#8593; 100.43% vs 2024</p>
+                </div>
+                <div class="kpi-card bg-white p-6 rounded-xl border-l-4 border-red-500 shadow-sm">
+                    <p class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">Cost</p>
+                    <h4 class="text-2xl font-bold text-gray-900" id="kpi-cost">PHP 4,896,822</h4>
+                    <p class="text-xs text-red-500 mt-2 font-medium" id="kpi-cost-sub">&#8593; 99.49% vs 2024</p>
+                </div>
+                <div class="kpi-card bg-white p-6 rounded-xl border-l-4 border-emerald-500 shadow-sm">
+                    <p class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">Gross Profit</p>
+                    <h4 class="text-2xl font-bold text-gray-900" id="kpi-gp">PHP 7,649,373</h4>
+                    <p class="text-xs text-green-600 mt-2 font-medium" id="kpi-gp-sub">&#8593; 101.04% vs 2024</p>
+                </div>
+                <div class="kpi-card bg-white p-6 rounded-xl border-l-4 border-purple-500 shadow-sm">
+                    <p class="text-sm font-medium text-gray-500 uppercase tracking-wider mb-1">GP Margin</p>
+                    <h4 class="text-2xl font-bold text-gray-900" id="kpi-margin">60.97%</h4>
+                    <p class="text-xs text-green-600 mt-2 font-medium" id="kpi-margin-sub">&#8593; 19 bps vs 2024</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-12">
+            <div class="mb-6">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-2">2. Visual Analytics: Growth & Profitability Matrix</h3>
+                <p class="text-gray-600">The charts below illustrate the structural shifts in the company's service offerings. The macro comparison shows overall volume scaling, while the operational scatter plot reveals true profitability at the service-execution level, isolating 'winners' from 'bleeders'.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
+                    <h4 class="text-lg font-bold text-gray-800 mb-1">YoY Financial Trajectory</h4>
+                    <p class="text-sm text-gray-500 mb-6">Comparison of Total Sales, Cost, and Gross Profit.</p>
+                    <div class="chart-container flex-grow">
+                        <canvas id="yoyChart"></canvas>
+                    </div>
+                    <div class="mt-4 p-3 bg-blue-50 rounded-lg text-sm text-blue-800">
+                        <strong>Insight:</strong> Top-line growth more than doubled, driven by successful expansion, while preserving overall gross profit margins.
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
+                    <h4 class="text-lg font-bold text-gray-800 mb-1">2025 Type Performance Matrix</h4>
+                    <p class="text-sm text-gray-500 mb-6">Sales Volume (X) vs. GP Margin % (Y). Target: Top Right Quadrant.</p>
+                    <div class="chart-container flex-grow">
+                        <canvas id="typeScatterChart"></canvas>
+                    </div>
+                    <div class="mt-4 p-3 bg-amber-50 rounded-lg text-sm text-amber-800">
+                        <strong>Warning:</strong> Fabrication and Media Coverage reside in the high-risk lower quadrants (high resource, low margin < 36%). Terminals dominate the high-volume/high-margin zone.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="mb-12">
+            <div class="mb-6">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-2">3. Category & Segment Analysis</h3>
+                <p class="text-gray-600">A detailed breakdown of 2025 performance by operational category. This tabular view allows for precise numerical comparison, highlighting the dominance of the 'Activation' category and uncovering data anomalies in 'Fabrication'.</p>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project Category (2025)</th>
+                                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Gross Sales (PHP)</th>
+                                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Cost (PHP)</th>
+                                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Gross Profit (PHP)</th>
+                                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">GP Margin</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">ACTIVATION</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">12,042,755.20</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">4,618,759.59</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right font-medium">7,423,995.61</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-bold text-right">61.65%</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">LOGISTICS</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">75,152.00</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">35,443.41</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right font-medium">39,708.59</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-medium text-right">52.84%</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50 bg-red-50">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">DIGITAL</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">346,976.00</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">242,316.00</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right font-medium">104,660.00</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-bold text-right">30.16%</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50 bg-amber-50 border-l-4 border-amber-500">
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 flex items-center">
+                                    <span class="mr-2 text-amber-500">&#9888;</span> FABRICATION
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">81,312.00</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right">303.00</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 text-right font-medium">81,009.00</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-amber-600 font-bold text-right">99.63%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <h5 class="font-bold text-gray-800 mb-1">GP Margin Validation</h5>
+                    <p class="text-sm text-gray-600">Gross Profit mathematics (Sales - Cost = GP) are <strong>100% consistent</strong> across all 2024 and 2025 records.</p>
+                </div>
+                <div class="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                    <h5 class="font-bold text-amber-800 mb-1">Data Limitation Warning</h5>
+                    <p class="text-sm text-amber-700">Category Fabrication shows a highly unusual 99.63% margin driven by a PHP 303 cost entry against PHP 81k sales. This indicates unrecorded or lagging expense data.</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="mb-6">
+                <h3 class="text-2xl font-semibold text-gray-800 mb-2">4. Strategic Risks & Recommendations</h3>
+                <p class="text-gray-600">Based on the data analysis, the following structural risks and strategic opportunities have been identified for immediate management review.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-xl border-t-4 border-red-500 shadow-sm flex flex-col h-full">
+                    <div class="text-red-500 text-2xl mb-3">&#9888;</div>
+                    <h4 class="text-lg font-bold text-gray-900 mb-2">Incomplete Cost Risk</h4>
+                    <p class="text-sm text-gray-600 flex-grow mb-4">Management must review projects exhibiting near 100% GP Margins. Subcontractor or vendor costs for these specific projects likely have not yet been logged. If unbilled liabilities are processed later, historical profits will drop.</p>
+                    <div class="mt-auto pt-4 border-t border-gray-100">
+                        <p class="text-sm font-semibold text-indigo-700">Action: Immediate Cost Audit</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl border-t-4 border-orange-400 shadow-sm flex flex-col h-full">
+                    <div class="text-orange-400 text-2xl mb-3">&#8681;</div>
+                    <h4 class="text-lg font-bold text-gray-900 mb-2">Fabrication Margin Leakage</h4>
+                    <p class="text-sm text-gray-600 flex-grow mb-4">Fabrication (Type) generated over PHP 2.04M in sales but cost PHP 1.3M to execute, yielding a weak 35.38% margin. This poses a financial risk if it scales without structural cost improvements.</p>
+                    <div class="mt-auto pt-4 border-t border-gray-100">
+                        <p class="text-sm font-semibold text-indigo-700">Action: Restructure / Reprice</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl border-t-4 border-green-500 shadow-sm flex flex-col h-full">
+                    <div class="text-green-500 text-2xl mb-3">&#9733;</div>
+                    <h4 class="text-lg font-bold text-gray-900 mb-2">Scale the Winners</h4>
+                    <p class="text-sm text-gray-600 flex-grow mb-4">The core operations (Terminals and Sampling-Dry) command healthy margins (~67% to 68%), indicating strong pricing power and highly efficient execution in these specialized areas.</p>
+                    <div class="mt-auto pt-4 border-t border-gray-100">
+                        <p class="text-sm font-semibold text-indigo-700">Action: Direct Marketing Resources</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        const financialData = {
+            '2024': { sales: 'PHP 6,259,568', cost: 'PHP 2,454,704', gp: 'PHP 3,804,863', margin: '60.78%', s_sub: '-', c_sub: '-', g_sub: '-', m_sub: '-' },
+            '2025': { sales: 'PHP 12,546,195', cost: 'PHP 4,896,822', gp: 'PHP 7,649,373', margin: '60.97%', s_sub: '↑ 100.43% vs 2024', c_sub: '↑ 99.49% vs 2024', g_sub: '↑ 101.04% vs 2024', m_sub: '↑ 19 bps vs 2024' },
+            'variance': { sales: '+ PHP 6,286,627', cost: '+ PHP 2,442,117', gp: '+ PHP 3,844,509', margin: '+ 0.19%', s_sub: '+100.43%', c_sub: '+99.49%', g_sub: '+101.04%', m_sub: '+19 bps' }
+        };
+
+        function updateKPIs(period) {
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${period}`).classList.add('active');
+
+            const data = financialData[period];
+            document.getElementById('kpi-sales').innerText = data.sales;
+            document.getElementById('kpi-cost').innerText = data.cost;
+            document.getElementById('kpi-gp').innerText = data.gp;
+            document.getElementById('kpi-margin').innerText = data.margin;
+
+            const updateSub = (id, text) => {
+                const el = document.getElementById(id);
+                el.innerText = text;
+                el.className = text.includes('↑') || text.includes('+') ? 'text-xs text-green-600 mt-2 font-medium' : 'text-xs text-gray-400 mt-2 font-medium';
+            };
+
+            updateSub('kpi-sales-sub', data.s_sub);
+            updateSub('kpi-cost-sub', data.c_sub);
+            updateSub('kpi-gp-sub', data.g_sub);
+            updateSub('kpi-margin-sub', data.m_sub);
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            
+            const ctxYoY = document.getElementById('yoyChart').getContext('2d');
+            new Chart(ctxYoY, {
+                type: 'bar',
+                data: {
+                    labels: ['Gross Sales', 'Cost', 'Gross Profit'],
+                    datasets: [
+                        {
+                            label: 'FY 2024',
+                            data: [6259568, 2454704, 3804863],
+                            backgroundColor: '#94a3b8',
+                            borderRadius: 4
+                        },
+                        {
+                            label: 'FY 2025',
+                            data: [12546195, 4896822, 7649373],
+                            backgroundColor: '#1e3a8a',
+                            borderRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let value = context.raw || 0;
+                                    return context.dataset.label + ': PHP ' + value.toLocaleString();
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) { return 'PHP ' + (value/1000000).toFixed(1) + 'M'; }
+                            }
+                        }
+                    }
+                }
+            });
+
+            const ctxScatter = document.getElementById('typeScatterChart').getContext('2d');
+            new Chart(ctxScatter, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Core / High Profit (Winners)',
+                            data: [
+                                { x: 7071344, y: 67.92, type: 'TERMINALS' },
+                                { x: 2629284, y: 67.25, type: 'SAMPLING-DRY' },
+                                { x: 83916, y: 75.59, type: 'SCHOOLS' }
+                            ],
+                            backgroundColor: '#10b981', 
+                            pointRadius: 8,
+                            pointHoverRadius: 10
+                        },
+                        {
+                            label: 'Low Volume / Med Profit',
+                            data: [
+                                { x: 298211, y: 49.57, type: 'LIVE EVENT' },
+                                { x: 75152, y: 52.84, type: 'HAULING' }
+                            ],
+                            backgroundColor: '#6b7280', 
+                            pointRadius: 6,
+                            pointHoverRadius: 8
+                        },
+                        {
+                            label: 'High Resource / Low Profit (Bleeders)',
+                            data: [
+                                { x: 2041312, y: 35.38, type: 'FABRICATION' },
+                                { x: 346976, y: 30.16, type: 'MEDIA COVERAGE' }
+                            ],
+                            backgroundColor: '#ef4444', 
+                            pointRadius: 8,
+                            pointHoverRadius: 10
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const d = context.raw;
+                                    return `${d.type}: PHP ${d.x.toLocaleString()} Sales, ${d.y}% Margin`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Gross Sales Volume (PHP)' },
+                            ticks: {
+                                callback: function(value) { return (value/1000000).toFixed(1) + 'M'; }
+                            }
+                        },
+                        y: {
+                            title: { display: true, text: 'Gross Profit Margin (%)' },
+                            beginAtZero: true,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
